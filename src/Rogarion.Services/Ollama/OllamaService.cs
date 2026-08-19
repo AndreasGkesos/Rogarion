@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Rogarion.Core.Interfaces;
+using Rogarion.Core.Models;
 
 namespace Rogarion.Services.Ollama;
 
@@ -35,7 +36,10 @@ public class OllamaService : IOllamaService
         try
         {
             var response = await _httpClient.GetFromJsonAsync<TagsResponse>("/api/tags", cancellationToken);
-            return response?.Models?.Select(m => m.Name).ToList() ?? [];
+            return response?.Models?
+                .Where(m => m.Capabilities is null || m.Capabilities.Contains("completion"))
+                .Select(m => m.Name)
+                .ToList() ?? [];
         }
         catch (HttpRequestException)
         {
@@ -45,6 +49,32 @@ public class OllamaService : IOllamaService
         {
             return [];
         }
+    }
+
+    public async Task<string> SendChatAsync(string model, IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken = default)
+    {
+        var request = new ChatRequest
+        {
+            Model = model,
+            Stream = false,
+            Messages = messages.Select(m => new ChatRequestMessage
+            {
+                Role = m.Role switch
+                {
+                    ChatRole.User => "user",
+                    ChatRole.Assistant => "assistant",
+                    ChatRole.System => "system",
+                    _ => "user"
+                },
+                Content = m.Content
+            }).ToList()
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/chat", request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken);
+        return result?.Message?.Content ?? string.Empty;
     }
 
     private sealed class TagsResponse
@@ -57,5 +87,35 @@ public class OllamaService : IOllamaService
     {
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("capabilities")]
+        public List<string>? Capabilities { get; set; }
+    }
+
+    private sealed class ChatRequest
+    {
+        [JsonPropertyName("model")]
+        public string Model { get; set; } = string.Empty;
+
+        [JsonPropertyName("messages")]
+        public List<ChatRequestMessage> Messages { get; set; } = [];
+
+        [JsonPropertyName("stream")]
+        public bool Stream { get; set; }
+    }
+
+    private sealed class ChatRequestMessage
+    {
+        [JsonPropertyName("role")]
+        public string Role { get; set; } = string.Empty;
+
+        [JsonPropertyName("content")]
+        public string Content { get; set; } = string.Empty;
+    }
+
+    private sealed class ChatResponse
+    {
+        [JsonPropertyName("message")]
+        public ChatRequestMessage? Message { get; set; }
     }
 }

@@ -5,111 +5,175 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="260" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-        <!-- Sidebar: chat history -->
-        <Grid Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <TextBlock Grid.Row="0"
-                       Text="History"
-                       Margin="16,16,16,8"
-                       Style="{ThemeResource SubtitleTextBlockStyle}" />
-
-            <ListView x:Name="SessionListView" Grid.Row="1" Margin="8,0,8,8">
-                <!-- Populated in Milestone 6/7 -->
-            </ListView>
+        <!-- Custom title bar (draggable region for ExtendsContentIntoTitleBar) -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0">
+            <TextBlock Text="Rogarion"
+                       Style="{ThemeResource CaptionTextBlockStyle}"
+                       VerticalAlignment="Center"
+                       Margin="16,0,0,0"
+                       Opacity="0.8" />
         </Grid>
 
-        <!-- Main chat pane -->
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-            <!-- Model picker (top bar) -->
-            <Grid Grid.Row="0"
-                  x:Name="TopBar"
-                  Padding="16,12"
-                  Visibility="Collapsed">
-                <ComboBox x:Name="ModelPickerComboBox"
-                          PlaceholderText="Select a model"
-                          MinWidth="220"
-                          HorizontalAlignment="Left" />
+            <!-- Sidebar: chat history -->
+            <Grid Grid.Column="0" Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Text="History"
+                           Margin="16,16,16,8"
+                           Style="{ThemeResource SubtitleTextBlockStyle}" />
+
+                <ListView x:Name="SessionListView" Grid.Row="1" Margin="8,0,8,8">
+                    <!-- Populated in Milestone 6/7 -->
+                </ListView>
             </Grid>
 
-            <!-- Checking state -->
-            <StackPanel x:Name="CheckingPanel"
-                        Grid.Row="1"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        Spacing="12">
-                <ProgressRing IsActive="True" Width="32" Height="32" />
-                <TextBlock Text="Checking for Ollama..."
-                           Style="{ThemeResource BodyTextBlockStyle}"
-                           HorizontalAlignment="Center" />
-            </StackPanel>
+            <!-- Main chat pane -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <!-- Unreachable state -->
-            <StackPanel x:Name="UnreachablePanel"
-                        Grid.Row="1"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        Spacing="8"
-                        MaxWidth="420"
-                        Visibility="Collapsed">
-                <TextBlock Text="Ollama isn't running"
-                           Style="{ThemeResource SubtitleTextBlockStyle}"
-                           HorizontalAlignment="Center" />
-                <TextBlock Text="Rogarion couldn't reach Ollama at localhost:11434. See the README for setup instructions: install Ollama, pull a model, and make sure it's running."
-                           Style="{ThemeResource BodyTextBlockStyle}"
-                           TextWrapping="Wrap"
-                           TextAlignment="Center" />
-            </StackPanel>
+                <!-- Model picker (top bar) -->
+                <Grid Grid.Row="0"
+                      x:Name="TopBar"
+                      Padding="16,12"
+                      Visibility="Collapsed">
+                    <ComboBox x:Name="ModelPickerComboBox"
+                              PlaceholderText="Select a model"
+                              MinWidth="220"
+                              HorizontalAlignment="Left"
+                              SelectionChanged="ModelPickerComboBox_SelectionChanged" />
+                </Grid>
 
-            <!-- No models state -->
-            <StackPanel x:Name="NoModelsPanel"
-                        Grid.Row="1"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        Spacing="8"
-                        MaxWidth="420"
-                        Visibility="Collapsed">
-                <TextBlock Text="No models installed"
-                           Style="{ThemeResource SubtitleTextBlockStyle}"
-                           HorizontalAlignment="Center" />
-                <TextBlock Text="Ollama is running, but no models are installed. Pull one from a terminal, e.g. 'ollama pull qwen2.5-coder:7b', then restart Rogarion. See the README for details."
-                           Style="{ThemeResource BodyTextBlockStyle}"
-                           TextWrapping="Wrap"
-                           TextAlignment="Center" />
-            </StackPanel>
+                <!-- Checking state -->
+                <StackPanel x:Name="CheckingPanel"
+                            Grid.Row="1"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="12">
+                    <ProgressRing IsActive="True" Width="32" Height="32" />
+                    <TextBlock Text="Checking for Ollama..."
+                               Style="{ThemeResource BodyTextBlockStyle}"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
 
-            <!-- Empty state (ready, no conversation yet) -->
-            <StackPanel x:Name="EmptyStatePanel"
-                        Grid.Row="1"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        Spacing="8"
-                        Visibility="Collapsed">
-                <TextBlock Text="Ask a coding question to get started"
-                           Style="{ThemeResource BodyStrongTextBlockStyle}"
-                           HorizontalAlignment="Center" />
-            </StackPanel>
+                <!-- Unreachable state -->
+                <StackPanel x:Name="UnreachablePanel"
+                            Grid.Row="1"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="8"
+                            MaxWidth="420"
+                            Visibility="Collapsed">
+                    <TextBlock Text="Ollama isn't running"
+                               Style="{ThemeResource SubtitleTextBlockStyle}"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Rogarion couldn't reach Ollama at localhost:11434. See the README for setup instructions: install Ollama, pull a model, and make sure it's running."
+                               Style="{ThemeResource BodyTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center" />
+                </StackPanel>
 
-            <Grid Grid.Row="2" Margin="16" x:Name="InputBar" Visibility="Collapsed">
-                <TextBox x:Name="MessageInputBox"
-                         PlaceholderText="Ask a coding question..."
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         MinHeight="44" />
+                <!-- No models state -->
+                <StackPanel x:Name="NoModelsPanel"
+                            Grid.Row="1"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="8"
+                            MaxWidth="420"
+                            Visibility="Collapsed">
+                    <TextBlock Text="No models installed"
+                               Style="{ThemeResource SubtitleTextBlockStyle}"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Ollama is running, but no models are installed. Pull one from a terminal, e.g. 'ollama pull qwen2.5-coder:7b', then restart Rogarion. See the README for details."
+                               Style="{ThemeResource BodyTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center" />
+                </StackPanel>
+
+                <!-- Empty state (ready, no conversation yet) -->
+                <StackPanel x:Name="EmptyStatePanel"
+                            Grid.Row="1"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="8"
+                            Visibility="Collapsed">
+                    <TextBlock Text="Ask a coding question to get started"
+                               Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Message list -->
+                <ScrollViewer x:Name="MessagesScrollViewer"
+                              Grid.Row="1"
+                              Visibility="Collapsed">
+                    <ItemsControl x:Name="MessagesItemsControl" Margin="16,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,4"
+                                        Padding="12,8"
+                                        CornerRadius="6"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding Role}"
+                                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                                   Opacity="0.7" />
+                                        <TextBlock Text="{Binding Content}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <Grid Grid.Row="2" Margin="16" x:Name="InputBar" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="MessageInputBox"
+                             Grid.Column="0"
+                             PlaceholderText="Ask a coding question..."
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="44"
+                             KeyDown="MessageInputBox_KeyDown"
+                             TextChanged="MessageInputBox_TextChanged" />
+
+                    <Button x:Name="SendButton"
+                            Grid.Column="1"
+                            Content="Send"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Bottom"
+                            Click="SendButton_Click" />
+                </Grid>
+
+                <TextBlock x:Name="ErrorTextBlock"
+                           Grid.Row="1"
+                           VerticalAlignment="Bottom"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,8"
+                           Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                           Visibility="Collapsed" />
             </Grid>
         </Grid>
     </Grid>
