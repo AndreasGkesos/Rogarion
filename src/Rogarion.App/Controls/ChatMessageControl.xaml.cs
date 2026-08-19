@@ -66,6 +66,15 @@ public sealed partial class ChatMessageControl : UserControl
             _ => string.Empty
         };
 
+        var isUser = Message?.Role == ChatRole.User;
+        BubbleBorder.HorizontalAlignment = isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+        BubbleBorder.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
+            isUser ? "AccentFillColorDefaultBrush" : "CardBackgroundFillColorDefaultBrush"];
+        RoleTextBlock.HorizontalAlignment = isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+        RoleTextBlock.Foreground = isUser
+            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextOnAccentFillColorSecondaryBrush"]
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+
         SegmentsPanel.Children.Clear();
 
         if (Message is null)
@@ -77,17 +86,25 @@ public sealed partial class ChatMessageControl : UserControl
         {
             SegmentsPanel.Children.Add(segment.IsCode
                 ? BuildCodeBlock(segment)
-                : BuildProseBlock(segment));
+                : BuildProseBlock(segment, isUser));
         }
     }
 
-    private static TextBlock BuildProseBlock(MessageSegment segment)
+    private static TextBlock BuildProseBlock(MessageSegment segment, bool isUser)
     {
-        return new TextBlock
+        var textBlock = new TextBlock
         {
             Text = segment.Text,
-            TextWrapping = TextWrapping.Wrap
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true
         };
+
+        if (isUser)
+        {
+            textBlock.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextOnAccentFillColorPrimaryBrush"];
+        }
+
+        return textBlock;
     }
 
     private static FrameworkElement BuildCodeBlock(MessageSegment segment)

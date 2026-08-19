@@ -2,17 +2,21 @@
 <UserControl
     x:Class="Rogarion.App.Controls.ChatMessageControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    HorizontalContentAlignment="Stretch">
 
-    <Border Margin="0,4"
-            Padding="12,8"
-            CornerRadius="6"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-        <StackPanel Spacing="4">
-            <TextBlock x:Name="RoleTextBlock"
-                       Style="{ThemeResource CaptionTextBlockStyle}"
-                       Opacity="0.7" />
-            <StackPanel x:Name="SegmentsPanel" Spacing="8" />
-        </StackPanel>
-    </Border>
+    <Grid>
+        <Border x:Name="BubbleBorder"
+                Margin="0,4"
+                Padding="12,8"
+                CornerRadius="6"
+                MaxWidth="720">
+            <StackPanel Spacing="4">
+                <TextBlock x:Name="RoleTextBlock"
+                           Style="{ThemeResource CaptionTextBlockStyle}"
+                           Opacity="0.7" />
+                <StackPanel x:Name="SegmentsPanel" Spacing="8" />
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>
