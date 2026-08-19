@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Rogarion.Core.Interfaces;
 using Rogarion.Core.Models;
@@ -51,12 +53,15 @@ public class OllamaService : IOllamaService
         }
     }
 
-    public async Task<string> SendChatAsync(string model, IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<string> StreamChatAsync(
+        string model,
+        IReadOnlyList<ChatMessage> messages,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var request = new ChatRequest
         {
             Model = model,
-            Stream = false,
+            Stream = true,
             Messages = messages.Select(m => new ChatRequestMessage
             {
                 Role = m.Role switch
@@ -70,11 +75,46 @@ public class OllamaService : IOllamaService
             }).ToList()
         };
 
-        var response = await _httpClient.PostAsJsonAsync("/api/chat", request, cancellationToken);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
+        {
+            Content = JsonContent.Create(request)
+        };
+
+        using var response = await _httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken);
-        return result?.Message?.Content ?? string.Empty;
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream);
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (line is null)
+            {
+                yield break;
+            }
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            var chunk = JsonSerializer.Deserialize<ChatResponse>(line);
+            if (chunk?.Message?.Content is { Length: > 0 } content)
+            {
+                yield return content;
+            }
+
+            if (chunk?.Done == true)
+            {
+                yield break;
+            }
+        }
     }
 
     private sealed class TagsResponse
@@ -117,5 +157,8 @@ public class OllamaService : IOllamaService
     {
         [JsonPropertyName("message")]
         public ChatRequestMessage? Message { get; set; }
+
+        [JsonPropertyName("done")]
+        public bool Done { get; set; }
     }
 }

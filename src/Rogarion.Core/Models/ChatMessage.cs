@@ -1,3 +1,5 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace Rogarion.Core.Models;
 
 public enum ChatRole
@@ -7,10 +9,12 @@ public enum ChatRole
     System
 }
 
-public class ChatMessage
+public partial class ChatMessage : ObservableObject
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public ChatRole Role { get; set; }
-    public string Content { get; set; } = string.Empty;
     public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+
+    [ObservableProperty]
+    private string _content = string.Empty;
 }

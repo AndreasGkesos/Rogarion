@@ -58,6 +58,8 @@ public sealed partial class MainWindow : Window
         ErrorTextBlock.Visibility = !string.IsNullOrEmpty(ViewModel.ErrorMessage) ? Visibility.Visible : Visibility.Collapsed;
 
         SendButton.IsEnabled = !ViewModel.IsSending && !string.IsNullOrWhiteSpace(MessageInputBox.Text);
+        SendButton.Visibility = ViewModel.IsSending ? Visibility.Collapsed : Visibility.Visible;
+        StopButton.Visibility = ViewModel.IsSending ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void MessageInputBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -101,7 +103,7 @@ public sealed partial class MainWindow : Window
 
     private void Send()
     {
-        if (string.IsNullOrWhiteSpace(MessageInputBox.Text))
+        if (string.IsNullOrWhiteSpace(MessageInputBox.Text) || ViewModel.IsSending)
         {
             return;
         }
@@ -109,5 +111,10 @@ public sealed partial class MainWindow : Window
         ViewModel.DraftMessage = MessageInputBox.Text;
         MessageInputBox.Text = string.Empty;
         _ = ViewModel.SendMessageCommand.ExecuteAsync(null);
+    }
+
+    private void StopButton_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.StopStreamingCommand.Execute(null);
     }
 }

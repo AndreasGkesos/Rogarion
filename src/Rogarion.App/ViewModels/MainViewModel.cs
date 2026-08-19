@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.UI.Dispatching;
 using Rogarion.Core.Interfaces;
 using Rogarion.Core.Models;
 
@@ -9,6 +10,8 @@ namespace Rogarion.App.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly IOllamaService _ollamaService;
+    private readonly DispatcherQueue _dispatcherQueue;
+    private CancellationTokenSource? _streamCts;
 
     [ObservableProperty]
     private bool _isCheckingOllama = true;
@@ -38,6 +41,7 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(IOllamaService ollamaService)
     {
         _ollamaService = ollamaService;
+        _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
     }
 
     public async Task InitializeAsync()
@@ -79,19 +83,39 @@ public partial class MainViewModel : ObservableObject
         Messages.Add(userMessage);
         DraftMessage = string.Empty;
 
+        var historyForRequest = Messages.ToList();
+        var assistantMessage = new ChatMessage { Role = ChatRole.Assistant, Content = string.Empty };
+        Messages.Add(assistantMessage);
+
+        _streamCts = new CancellationTokenSource();
         IsSending = true;
         try
         {
-            var reply = await _ollamaService.SendChatAsync(SelectedModel, [.. Messages]);
-            Messages.Add(new ChatMessage { Role = ChatRole.Assistant, Content = reply });
+            await foreach (var delta in _ollamaService.StreamChatAsync(SelectedModel, historyForRequest, _streamCts.Token))
+            {
+                _dispatcherQueue.TryEnqueue(() => assistantMessage.Content += delta);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // User stopped the stream or the app is closing; partial content is kept as-is.
         }
         catch (HttpRequestException)
         {
+            Messages.Remove(assistantMessage);
             ErrorMessage = "Couldn't reach Ollama. Check that it's still running and try again.";
         }
         finally
         {
             IsSending = false;
+            _streamCts?.Dispose();
+            _streamCts = null;
         }
+    }
+
+    [RelayCommand]
+    private void StopStreaming()
+    {
+        _streamCts?.Cancel();
     }
 }
