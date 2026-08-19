@@ -4,7 +4,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Windows.System;
 using Rogarion.App.ViewModels;
 
 namespace Rogarion.App;
@@ -86,19 +85,10 @@ public sealed partial class MainWindow : Window
         Send();
     }
 
-    private void MessageInputBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    private void EnterAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        if (e.Key == VirtualKey.Enter && !IsShiftPressed())
-        {
-            e.Handled = true;
-            Send();
-        }
-    }
-
-    private static bool IsShiftPressed()
-    {
-        var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift);
-        return state.HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+        args.Handled = true;
+        Send();
     }
 
     private void Send()

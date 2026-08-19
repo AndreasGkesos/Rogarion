@@ -156,8 +156,13 @@
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
                              MinHeight="44"
-                             KeyDown="MessageInputBox_KeyDown"
-                             TextChanged="MessageInputBox_TextChanged" />
+                             TextChanged="MessageInputBox_TextChanged">
+                        <TextBox.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="Enter"
+                                                  Modifiers="None"
+                                                  Invoked="EnterAccelerator_Invoked" />
+                        </TextBox.KeyboardAccelerators>
+                    </TextBox>
 
                     <Button x:Name="SendButton"
                             Grid.Column="1"
