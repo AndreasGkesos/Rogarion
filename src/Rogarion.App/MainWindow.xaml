@@ -2,7 +2,8 @@
 <Window
     x:Class="Rogarion.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Rogarion.App.Controls">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -127,18 +128,7 @@
                     <ItemsControl x:Name="MessagesItemsControl" Margin="16,8">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Margin="0,4"
-                                        Padding="12,8"
-                                        CornerRadius="6"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Role}"
-                                                   Style="{ThemeResource CaptionTextBlockStyle}"
-                                                   Opacity="0.7" />
-                                        <TextBlock Text="{Binding Content}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </Border>
+                                <controls:ChatMessageControl Message="{Binding}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

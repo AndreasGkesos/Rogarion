@@ -17,4 +17,12 @@ public partial class ChatMessage : ObservableObject
 
     [ObservableProperty]
     private string _content = string.Empty;
+
+    [ObservableProperty]
+    private IReadOnlyList<MessageSegment> _segments = [];
+
+    partial void OnContentChanged(string value)
+    {
+        Segments = MessageContentParser.Parse(value);
+    }
 }
