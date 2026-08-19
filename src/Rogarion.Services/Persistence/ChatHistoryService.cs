@@ -1,3 +1,4 @@
+using LiteDB;
 using Rogarion.Core.Interfaces;
 using Rogarion.Core.Models;
 
@@ -5,15 +6,46 @@ namespace Rogarion.Services.Persistence;
 
 public class ChatHistoryService : IChatHistoryService
 {
-    public Task<IReadOnlyList<ChatSession>> GetSessionsAsync()
+    private const string CollectionName = "sessions";
+
+    private readonly ILiteCollection<ChatSession> _sessions;
+
+    static ChatHistoryService()
     {
-        // Implemented in Milestone 6 (LiteDB).
-        return Task.FromResult<IReadOnlyList<ChatSession>>([]);
+        BsonMapper.Global.Entity<ChatMessage>().Ignore(m => m.Segments);
+        BsonMapper.Global.Entity<ChatSession>().Ignore(s => s.IsGeneratingTitle);
     }
 
-    public Task<ChatSession?> GetSessionAsync(Guid id) => Task.FromResult<ChatSession?>(null);
+    public ChatHistoryService(LiteDbContext dbContext)
+    {
+        _sessions = dbContext.GetCollection<ChatSession>(CollectionName);
+        _sessions.EnsureIndex(s => s.CreatedAt);
+    }
 
-    public Task SaveSessionAsync(ChatSession session) => Task.CompletedTask;
+    public Task<IReadOnlyList<ChatSession>> GetSessionsAsync()
+    {
+        var sessions = _sessions.Query()
+            .OrderByDescending(s => s.CreatedAt)
+            .ToList();
 
-    public Task DeleteSessionAsync(Guid id) => Task.CompletedTask;
+        return Task.FromResult<IReadOnlyList<ChatSession>>(sessions);
+    }
+
+    public Task<ChatSession?> GetSessionAsync(Guid id)
+    {
+        var session = _sessions.FindById(id);
+        return Task.FromResult<ChatSession?>(session);
+    }
+
+    public Task SaveSessionAsync(ChatSession session)
+    {
+        _sessions.Upsert(session);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteSessionAsync(Guid id)
+    {
+        _sessions.Delete(id);
+        return Task.CompletedTask;
+    }
 }

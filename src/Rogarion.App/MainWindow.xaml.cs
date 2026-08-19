@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Rogarion.App.ViewModels;
+using Rogarion.Core.Models;
 
 namespace Rogarion.App;
 
@@ -25,14 +26,26 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
 
-        ViewModel.PropertyChanged += (_, _) => UpdateVisibleState();
+        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.AvailableModels.CollectionChanged += (_, _) => UpdateModelPicker();
         ViewModel.Messages.CollectionChanged += (_, _) => UpdateVisibleState();
 
         MessagesItemsControl.ItemsSource = ViewModel.Messages;
+        SessionListView.ItemsSource = ViewModel.Sessions;
 
         _ = ViewModel.InitializeAsync();
         UpdateVisibleState();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        UpdateVisibleState();
+
+        if (e.PropertyName == nameof(MainViewModel.SelectedSession)
+            && !ReferenceEquals(SessionListView.SelectedItem, ViewModel.SelectedSession))
+        {
+            SessionListView.SelectedItem = ViewModel.SelectedSession;
+        }
     }
 
     private void UpdateVisibleState()
@@ -106,5 +119,72 @@ public sealed partial class MainWindow : Window
     private void StopButton_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.StopStreamingCommand.Execute(null);
+    }
+
+    private void NewChatButton_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.NewSessionCommand.Execute(null);
+    }
+
+    private void SessionListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (SessionListView.SelectedItem is ChatSession session)
+        {
+            ViewModel.LoadSessionCommand.Execute(session);
+        }
+    }
+
+    private async void RenameSessionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ChatSession session })
+        {
+            return;
+        }
+
+        var textBox = new TextBox
+        {
+            Text = session.Title,
+            SelectionStart = session.Title.Length
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = "Rename conversation",
+            Content = textBox,
+            PrimaryButtonText = "Rename",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            await ViewModel.RenameSessionCommand.ExecuteAsync((session, textBox.Text));
+        }
+    }
+
+    private async void DeleteSessionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ChatSession session })
+        {
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = "Delete this conversation?",
+            Content = "This can't be undone.",
+            PrimaryButtonText = "Delete",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = Content.XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            await ViewModel.DeleteSessionCommand.ExecuteAsync(session);
+        }
     }
 }

@@ -36,6 +36,12 @@ public partial class App : Application
             client.BaseAddress = new Uri("http://localhost:11434");
         });
 
+        var appDataDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Rogarion");
+        var dbPath = Path.Combine(appDataDir, "rogarion.db");
+
+        services.AddSingleton(_ => new LiteDbContext(dbPath));
         services.AddSingleton<IChatHistoryService, ChatHistoryService>();
 
         services.AddTransient<MainViewModel>();
