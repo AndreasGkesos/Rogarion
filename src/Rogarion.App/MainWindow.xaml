@@ -30,20 +30,81 @@
         <!-- Main chat pane -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0"
+            <!-- Model picker (top bar) -->
+            <Grid Grid.Row="0"
+                  x:Name="TopBar"
+                  Padding="16,12"
+                  Visibility="Collapsed">
+                <ComboBox x:Name="ModelPickerComboBox"
+                          PlaceholderText="Select a model"
+                          MinWidth="220"
+                          HorizontalAlignment="Left" />
+            </Grid>
+
+            <!-- Checking state -->
+            <StackPanel x:Name="CheckingPanel"
+                        Grid.Row="1"
                         VerticalAlignment="Center"
                         HorizontalAlignment="Center"
-                        Spacing="8">
+                        Spacing="12">
+                <ProgressRing IsActive="True" Width="32" Height="32" />
+                <TextBlock Text="Checking for Ollama..."
+                           Style="{ThemeResource BodyTextBlockStyle}"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Unreachable state -->
+            <StackPanel x:Name="UnreachablePanel"
+                        Grid.Row="1"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="8"
+                        MaxWidth="420"
+                        Visibility="Collapsed">
+                <TextBlock Text="Ollama isn't running"
+                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="Rogarion couldn't reach Ollama at localhost:11434. See the README for setup instructions: install Ollama, pull a model, and make sure it's running."
+                           Style="{ThemeResource BodyTextBlockStyle}"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center" />
+            </StackPanel>
+
+            <!-- No models state -->
+            <StackPanel x:Name="NoModelsPanel"
+                        Grid.Row="1"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="8"
+                        MaxWidth="420"
+                        Visibility="Collapsed">
+                <TextBlock Text="No models installed"
+                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="Ollama is running, but no models are installed. Pull one from a terminal, e.g. 'ollama pull qwen2.5-coder:7b', then restart Rogarion. See the README for details."
+                           Style="{ThemeResource BodyTextBlockStyle}"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center" />
+            </StackPanel>
+
+            <!-- Empty state (ready, no conversation yet) -->
+            <StackPanel x:Name="EmptyStatePanel"
+                        Grid.Row="1"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="8"
+                        Visibility="Collapsed">
                 <TextBlock Text="Ask a coding question to get started"
                            Style="{ThemeResource BodyStrongTextBlockStyle}"
                            HorizontalAlignment="Center" />
             </StackPanel>
 
-            <Grid Grid.Row="1" Margin="16">
+            <Grid Grid.Row="2" Margin="16" x:Name="InputBar" Visibility="Collapsed">
                 <TextBox x:Name="MessageInputBox"
                          PlaceholderText="Ask a coding question..."
                          AcceptsReturn="True"
