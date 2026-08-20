@@ -16,6 +16,11 @@ BundleArtifacts/
 *.cer
 *.pfx
 
+## WiX installer build output
+Rogarion.Installer/staging/
+*.msi
+*.wixpdb
+
 ## LiteDB local data
 *.db
 *.litedb
