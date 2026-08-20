@@ -26,11 +26,14 @@ public static partial class MessageContentParser
 
             var language = match.Groups[1].Value;
             var code = match.Groups[2].Value.TrimEnd('\n', '\r');
+            var matchedText = match.Value;
+            var isComplete = matchedText.EndsWith("```", StringComparison.Ordinal);
             segments.Add(new MessageSegment
             {
                 IsCode = true,
                 Text = code,
-                Language = string.IsNullOrWhiteSpace(language) ? null : language
+                Language = string.IsNullOrWhiteSpace(language) ? null : language,
+                IsComplete = isComplete
             });
 
             lastIndex = match.Index + match.Length;

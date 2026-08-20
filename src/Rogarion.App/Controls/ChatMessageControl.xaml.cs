@@ -128,7 +128,11 @@ public sealed partial class ChatMessageControl : UserControl
             IsTextSelectionEnabled = true
         };
 
-        var language = ResolveLanguage(segment.Language);
+        // Skip ColorCode highlighting while the fence is still open (mid-stream): re-running
+        // the highlighter from scratch on every streamed token against a growing block is
+        // expensive and can blow up memory on some inputs. Plain text renders instantly and
+        // gets replaced with the highlighted version once the block completes.
+        var language = segment.IsComplete ? ResolveLanguage(segment.Language) : null;
         if (language is not null)
         {
             Formatter.FormatRichTextBlock(segment.Text, language, richTextBlock);

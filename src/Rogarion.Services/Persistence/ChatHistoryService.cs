@@ -19,13 +19,13 @@ public class ChatHistoryService : IChatHistoryService
     public ChatHistoryService(LiteDbContext dbContext)
     {
         _sessions = dbContext.GetCollection<ChatSession>(CollectionName);
-        _sessions.EnsureIndex(s => s.CreatedAt);
+        _sessions.EnsureIndex(s => s.LastActivityAt);
     }
 
     public Task<IReadOnlyList<ChatSession>> GetSessionsAsync()
     {
         var sessions = _sessions.Query()
-            .OrderByDescending(s => s.CreatedAt)
+            .OrderByDescending(s => s.LastActivityAt)
             .ToList();
 
         return Task.FromResult<IReadOnlyList<ChatSession>>(sessions);

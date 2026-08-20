@@ -325,10 +325,6 @@ public partial class MainViewModel : ObservableObject
             Sessions.Insert(0, _currentSession);
             SelectedSession = _currentSession;
         }
-        else if (Sessions.IndexOf(_currentSession) > 0)
-        {
-            Sessions.Move(Sessions.IndexOf(_currentSession), 0);
-        }
 
         var messageText = PendingFiles.Count == 0 ? text : ComposeMessageWithFiles(text);
         var userMessage = new ChatMessage { Role = ChatRole.User, Content = messageText, ModeName = SelectedMode?.Name };
@@ -524,6 +520,13 @@ public partial class MainViewModel : ObservableObject
         }
 
         _currentSession.Messages = Messages.ToList();
+        _currentSession.LastActivityAt = DateTimeOffset.UtcNow;
         await _chatHistoryService.SaveSessionAsync(_currentSession);
+
+        var currentIndex = Sessions.IndexOf(_currentSession);
+        if (currentIndex > 0)
+        {
+            Sessions.Move(currentIndex, 0);
+        }
     }
 }
