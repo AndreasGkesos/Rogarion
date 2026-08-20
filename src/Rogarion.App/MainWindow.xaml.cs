@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Rogarion.App.Controls;
 using Rogarion.App.ViewModels;
 using Rogarion.Core.Models;
+using DispatcherTimer = Microsoft.UI.Xaml.DispatcherTimer;
 
 namespace Rogarion.App;
 
@@ -36,6 +37,10 @@ public sealed partial class MainWindow : Window
 
         ViewModel.PresetModes.CollectionChanged += (_, _) => UpdateModePicker();
         UpdateModePicker();
+
+        FileChipsControl.ItemsSource = ViewModel.PendingFiles;
+        ViewModel.PendingFiles.CollectionChanged += (_, _) => UpdateFileChipsVisibility();
+        UpdateFileChipsVisibility();
 
         _ = ViewModel.InitializeAsync();
         UpdateVisibleState();
@@ -73,14 +78,26 @@ public sealed partial class MainWindow : Window
         ErrorTextBlock.Text = ViewModel.ErrorMessage ?? string.Empty;
         ErrorTextBlock.Visibility = !string.IsNullOrEmpty(ViewModel.ErrorMessage) ? Visibility.Visible : Visibility.Collapsed;
 
-        SendButton.IsEnabled = !ViewModel.IsSending && !string.IsNullOrWhiteSpace(MessageInputBox.Text);
+        SendButton.IsEnabled = CanSend();
         SendButton.Visibility = ViewModel.IsSending ? Visibility.Collapsed : Visibility.Visible;
         StopButton.Visibility = ViewModel.IsSending ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void MessageInputBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        SendButton.IsEnabled = !ViewModel.IsSending && !string.IsNullOrWhiteSpace(MessageInputBox.Text);
+        SendButton.IsEnabled = CanSend();
+    }
+
+    private bool CanSend()
+    {
+        return !ViewModel.IsSending
+            && (!string.IsNullOrWhiteSpace(MessageInputBox.Text) || ViewModel.PendingFiles.Count > 0);
+    }
+
+    private void UpdateFileChipsVisibility()
+    {
+        FileChipsControl.Visibility = ViewModel.PendingFiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        SendButton.IsEnabled = CanSend();
     }
 
     private void UpdateModelPicker()
@@ -142,7 +159,7 @@ public sealed partial class MainWindow : Window
 
     private void Send()
     {
-        if (string.IsNullOrWhiteSpace(MessageInputBox.Text) || ViewModel.IsSending)
+        if (!CanSend())
         {
             return;
         }
@@ -155,6 +172,71 @@ public sealed partial class MainWindow : Window
     private void StopButton_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.StopStreamingCommand.Execute(null);
+    }
+
+    private void RemoveFileChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: Rogarion.Core.Models.PendingFile file })
+        {
+            ViewModel.RemovePendingFileCommand.Execute(file);
+        }
+    }
+
+    private void InputDropTarget_DragOver(object sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems)
+            ? Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy
+            : Windows.ApplicationModel.DataTransfer.DataPackageOperation.None;
+    }
+
+    private async void InputDropTarget_Drop(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+        {
+            return;
+        }
+
+        var items = await e.DataView.GetStorageItemsAsync();
+        var files = items
+            .OfType<Windows.Storage.StorageFile>()
+            .Select(f => (f.Name, ReadBytesAsync: (Func<Task<byte[]>>)(async () =>
+            {
+                using var stream = await f.OpenStreamForReadAsync();
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                return memoryStream.ToArray();
+            })))
+            .ToList();
+
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        var rejections = await ViewModel.AddFilesAsync(files);
+        if (rejections.Count > 0)
+        {
+            ShowTransientError(string.Join("; ", rejections));
+        }
+    }
+
+    private DispatcherTimer? _transientErrorTimer;
+
+    private void ShowTransientError(string message)
+    {
+        ViewModel.ErrorMessage = message;
+
+        _transientErrorTimer?.Stop();
+        _transientErrorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _transientErrorTimer.Tick += (_, _) =>
+        {
+            _transientErrorTimer?.Stop();
+            if (ViewModel.ErrorMessage == message)
+            {
+                ViewModel.ErrorMessage = null;
+            }
+        };
+        _transientErrorTimer.Start();
     }
 
     private void NewChatButton_Click(object sender, RoutedEventArgs e)
@@ -177,10 +259,11 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var currentTitle = session.Title ?? string.Empty;
         var textBox = new TextBox
         {
-            Text = session.Title,
-            SelectionStart = session.Title.Length
+            Text = currentTitle,
+            SelectionStart = currentTitle.Length
         };
 
         var dialog = new ContentDialog

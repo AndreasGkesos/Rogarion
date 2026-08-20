@@ -202,54 +202,88 @@
                     </ItemsControl>
                 </ScrollViewer>
 
-                <Grid Grid.Row="2" Margin="16" x:Name="InputBar" Visibility="Collapsed">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <StackPanel Grid.Row="2" Margin="16" x:Name="InputBar" Visibility="Collapsed" Spacing="8">
 
-                    <StackPanel Grid.Column="0"
-                                Margin="0,0,8,0"
+                    <ItemsControl x:Name="FileChipsControl" Visibility="Collapsed">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        CornerRadius="12"
+                                        Padding="10,4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE7C3;" FontSize="12" />
+                                        <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" />
+                                        <Button Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="2"
+                                                Click="RemoveFileChip_Click"
+                                                Tag="{Binding}"
+                                                ToolTipService.ToolTip="Remove">
+                                            <FontIcon Glyph="&#xE711;" FontSize="10" />
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Grid x:Name="InputDropTarget"
+                          AllowDrop="True"
+                          DragOver="InputDropTarget_DragOver"
+                          Drop="InputDropTarget_Drop">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0"
+                                    Margin="0,0,8,0"
+                                    VerticalAlignment="Bottom"
+                                    Spacing="4">
+                            <TextBlock Text="Mode"
+                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                       Opacity="0.7" />
+                            <ComboBox x:Name="ModePickerComboBox"
+                                      MinWidth="130"
+                                      SelectionChanged="ModePickerComboBox_SelectionChanged" />
+                        </StackPanel>
+
+                        <TextBox x:Name="MessageInputBox"
+                                 Grid.Column="1"
+                                 PlaceholderText="Ask a coding question, or drop a file..."
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="44"
+                                 TextChanged="MessageInputBox_TextChanged">
+                            <TextBox.KeyboardAccelerators>
+                                <KeyboardAccelerator Key="Enter"
+                                                      Modifiers="None"
+                                                      Invoked="EnterAccelerator_Invoked" />
+                            </TextBox.KeyboardAccelerators>
+                        </TextBox>
+
+                        <Button x:Name="SendButton"
+                                Grid.Column="2"
+                                Content="Send"
+                                Margin="8,0,0,0"
                                 VerticalAlignment="Bottom"
-                                Spacing="4">
-                        <TextBlock Text="Mode"
-                                   Style="{ThemeResource CaptionTextBlockStyle}"
-                                   Opacity="0.7" />
-                        <ComboBox x:Name="ModePickerComboBox"
-                                  MinWidth="130"
-                                  SelectionChanged="ModePickerComboBox_SelectionChanged" />
-                    </StackPanel>
+                                Click="SendButton_Click" />
 
-                    <TextBox x:Name="MessageInputBox"
-                             Grid.Column="1"
-                             PlaceholderText="Ask a coding question..."
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             MinHeight="44"
-                             TextChanged="MessageInputBox_TextChanged">
-                        <TextBox.KeyboardAccelerators>
-                            <KeyboardAccelerator Key="Enter"
-                                                  Modifiers="None"
-                                                  Invoked="EnterAccelerator_Invoked" />
-                        </TextBox.KeyboardAccelerators>
-                    </TextBox>
-
-                    <Button x:Name="SendButton"
-                            Grid.Column="2"
-                            Content="Send"
-                            Margin="8,0,0,0"
-                            VerticalAlignment="Bottom"
-                            Click="SendButton_Click" />
-
-                    <Button x:Name="StopButton"
-                            Grid.Column="2"
-                            Content="Stop"
-                            Margin="8,0,0,0"
-                            VerticalAlignment="Bottom"
-                            Visibility="Collapsed"
-                            Click="StopButton_Click" />
-                </Grid>
+                        <Button x:Name="StopButton"
+                                Grid.Column="2"
+                                Content="Stop"
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Bottom"
+                                Visibility="Collapsed"
+                                Click="StopButton_Click" />
+                    </Grid>
+                </StackPanel>
 
                 <TextBlock x:Name="ErrorTextBlock"
                            Grid.Row="1"

@@ -51,6 +51,8 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<PresetModeDefinition> PresetModes { get; } = [];
 
+    public ObservableCollection<PendingFile> PendingFiles { get; } = [];
+
     public MainViewModel(IOllamaService ollamaService, IChatHistoryService chatHistoryService, IPresetModeService presetModeService)
     {
         _ollamaService = ollamaService;
@@ -136,12 +138,78 @@ public partial class MainViewModel : ObservableObject
         await ReloadPresetModesAsync();
     }
 
+    private const int MaxFileSizeBytes = 200 * 1024;
+
+    [RelayCommand]
+    private void RemovePendingFile(PendingFile file)
+    {
+        PendingFiles.Remove(file);
+    }
+
+    public async Task<IReadOnlyList<string>> AddFilesAsync(IReadOnlyList<(string FileName, Func<Task<byte[]>> ReadBytesAsync)> files)
+    {
+        var rejections = new List<string>();
+
+        foreach (var file in files)
+        {
+            byte[] bytes;
+            try
+            {
+                bytes = await file.ReadBytesAsync();
+            }
+            catch (IOException)
+            {
+                rejections.Add($"{file.FileName}: couldn't be read");
+                continue;
+            }
+
+            if (bytes.Length > MaxFileSizeBytes)
+            {
+                rejections.Add($"{file.FileName}: too large (max 200 KB)");
+                continue;
+            }
+
+            if (bytes.Length == 0)
+            {
+                rejections.Add($"{file.FileName}: empty file");
+                continue;
+            }
+
+            if (LooksBinary(bytes))
+            {
+                rejections.Add($"{file.FileName}: unsupported file type");
+                continue;
+            }
+
+            var content = System.Text.Encoding.UTF8.GetString(bytes);
+            PendingFiles.Add(new PendingFile { FileName = file.FileName, Content = content });
+        }
+
+        return rejections;
+    }
+
+    private static bool LooksBinary(byte[] bytes)
+    {
+        // A null byte is a strong signal the content isn't text.
+        var sampleLength = Math.Min(bytes.Length, 8000);
+        for (var i = 0; i < sampleLength; i++)
+        {
+            if (bytes[i] == 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     [RelayCommand]
     private void NewSession()
     {
         _currentSession = null;
         SelectedSession = null;
         Messages.Clear();
+        PendingFiles.Clear();
         ErrorMessage = null;
     }
 
@@ -188,7 +256,7 @@ public partial class MainViewModel : ObservableObject
     private async Task SendMessageAsync()
     {
         var text = DraftMessage.Trim();
-        if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(SelectedModel) || IsSending)
+        if ((string.IsNullOrEmpty(text) && PendingFiles.Count == 0) || string.IsNullOrEmpty(SelectedModel) || IsSending)
         {
             return;
         }
@@ -202,15 +270,17 @@ public partial class MainViewModel : ObservableObject
             _currentSession = new ChatSession
             {
                 Model = SelectedModel,
-                Title = text.Length > 60 ? text[..60] + "…" : text
+                Title = BuildFallbackTitle(text)
             };
             Sessions.Insert(0, _currentSession);
             SelectedSession = _currentSession;
         }
 
-        var userMessage = new ChatMessage { Role = ChatRole.User, Content = text, ModeName = SelectedMode?.Name };
+        var messageText = PendingFiles.Count == 0 ? text : ComposeMessageWithFiles(text);
+        var userMessage = new ChatMessage { Role = ChatRole.User, Content = messageText, ModeName = SelectedMode?.Name };
         Messages.Add(userMessage);
         DraftMessage = string.Empty;
+        PendingFiles.Clear();
 
         var historyForRequest = BuildRequestHistory();
         var assistantMessage = new ChatMessage { Role = ChatRole.Assistant, Content = string.Empty };
@@ -313,6 +383,43 @@ public partial class MainViewModel : ObservableObject
         var insertIndex = history.Count > 0 ? history.Count - 1 : 0;
         history.Insert(insertIndex, new ChatMessage { Role = ChatRole.System, Content = scopedPrompt });
         return history;
+    }
+
+    private string BuildFallbackTitle(string text)
+    {
+        if (!string.IsNullOrEmpty(text))
+        {
+            return text.Length > 60 ? text[..60] + "…" : text;
+        }
+
+        if (PendingFiles.Count > 0)
+        {
+            var names = string.Join(", ", PendingFiles.Select(f => f.FileName));
+            return names.Length > 60 ? names[..60] + "…" : names;
+        }
+
+        return "New Conversation";
+    }
+
+    private string ComposeMessageWithFiles(string text)
+    {
+        var builder = new System.Text.StringBuilder();
+        if (!string.IsNullOrEmpty(text))
+        {
+            builder.AppendLine(text);
+            builder.AppendLine();
+        }
+
+        foreach (var file in PendingFiles)
+        {
+            builder.AppendLine($"{file.FileName}:");
+            builder.AppendLine("```");
+            builder.AppendLine(file.Content);
+            builder.AppendLine("```");
+            builder.AppendLine();
+        }
+
+        return builder.ToString().TrimEnd();
     }
 
     private async Task PersistCurrentSessionAsync()
