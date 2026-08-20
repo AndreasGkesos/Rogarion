@@ -219,6 +219,7 @@ public partial class MainViewModel : ObservableObject
         _currentSession = session;
         SelectedSession = session;
         ErrorMessage = null;
+        PendingFiles.Clear();
 
         Messages.Clear();
         foreach (var message in session.Messages)
@@ -274,6 +275,10 @@ public partial class MainViewModel : ObservableObject
             };
             Sessions.Insert(0, _currentSession);
             SelectedSession = _currentSession;
+        }
+        else if (Sessions.IndexOf(_currentSession) > 0)
+        {
+            Sessions.Move(Sessions.IndexOf(_currentSession), 0);
         }
 
         var messageText = PendingFiles.Count == 0 ? text : ComposeMessageWithFiles(text);
