@@ -26,6 +26,6 @@ public partial class ChatMessage : ObservableObject
 
     partial void OnContentChanged(string value)
     {
-        Segments = MessageContentParser.Parse(value);
+        Segments = MessageContentParser.Parse(value ?? string.Empty);
     }
 }

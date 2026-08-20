@@ -216,6 +216,14 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void LoadSession(ChatSession session)
     {
+        if (ReferenceEquals(_currentSession, session))
+        {
+            // Already the active session (e.g. re-triggered by selection sync after sending
+            // the first message) — nothing to reload, and clearing here would wipe out files
+            // just attached for the message currently being sent.
+            return;
+        }
+
         _currentSession = session;
         SelectedSession = session;
         ErrorMessage = null;
