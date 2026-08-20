@@ -2,7 +2,7 @@
 
 A native Windows desktop chat interface to locally-running [Ollama](https://ollama.com) models, purpose-built for quick coding questions and snippet-level help — not a general chatbot, not an autonomous coding agent. Think of it as a lightweight, private "ask a senior dev" tool: paste a method and ask for a refactor, drop a file and ask how a piece of it works, or ask a quick syntax question. Everything runs against Ollama on `localhost` — no cloud calls, no telemetry.
 
-It's a learning/portfolio project, not a finished product.
+It's a learning/portfolio project, not a finished product. Testing was done on an NVIDIA RTX 3060 6GB.
 
 ---
 
