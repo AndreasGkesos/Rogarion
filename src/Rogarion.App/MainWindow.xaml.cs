@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Rogarion.App.Controls;
 using Rogarion.App.ViewModels;
 using Rogarion.Core.Models;
 
@@ -32,6 +33,9 @@ public sealed partial class MainWindow : Window
 
         MessagesItemsControl.ItemsSource = ViewModel.Messages;
         SessionListView.ItemsSource = ViewModel.Sessions;
+
+        ViewModel.PresetModes.CollectionChanged += (_, _) => UpdateModePicker();
+        UpdateModePicker();
 
         _ = ViewModel.InitializeAsync();
         UpdateVisibleState();
@@ -91,6 +95,38 @@ public sealed partial class MainWindow : Window
     private void ModelPickerComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         ViewModel.SelectedModel = ModelPickerComboBox.SelectedItem as string;
+    }
+
+    private void UpdateModePicker()
+    {
+        var items = new List<object> { "None" };
+        items.AddRange(ViewModel.PresetModes);
+
+        var previouslySelectedId = (ModePickerComboBox.SelectedItem as PresetModeDefinition)?.Id;
+
+        ModePickerComboBox.ItemsSource = items;
+
+        ModePickerComboBox.SelectedIndex = previouslySelectedId is { } id
+            ? items.FindIndex(i => (i as PresetModeDefinition)?.Id == id) is var index and >= 0 ? index : 0
+            : 0;
+    }
+
+    private void ModePickerComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        ViewModel.SelectedMode = ModePickerComboBox.SelectedItem as PresetModeDefinition;
+    }
+
+    private SettingsWindow? _settingsWindow;
+
+    private void ModeSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settingsWindow is null)
+        {
+            _settingsWindow = new SettingsWindow(ViewModel);
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        }
+
+        _settingsWindow.Activate();
     }
 
     private void SendButton_Click(object sender, RoutedEventArgs e)

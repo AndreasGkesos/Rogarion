@@ -43,6 +43,7 @@ public partial class App : Application
 
         services.AddSingleton(_ => new LiteDbContext(dbPath));
         services.AddSingleton<IChatHistoryService, ChatHistoryService>();
+        services.AddSingleton<IPresetModeService, PresetModeService>();
 
         services.AddTransient<MainViewModel>();
 

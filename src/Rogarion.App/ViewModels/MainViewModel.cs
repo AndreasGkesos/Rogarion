@@ -11,6 +11,7 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly IOllamaService _ollamaService;
     private readonly IChatHistoryService _chatHistoryService;
+    private readonly IPresetModeService _presetModeService;
     private readonly DispatcherQueue _dispatcherQueue;
     private CancellationTokenSource? _streamCts;
     private ChatSession? _currentSession;
@@ -39,16 +40,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ChatSession? _selectedSession;
 
+    [ObservableProperty]
+    private PresetModeDefinition? _selectedMode;
+
     public ObservableCollection<string> AvailableModels { get; } = [];
 
     public ObservableCollection<ChatMessage> Messages { get; } = [];
 
     public ObservableCollection<ChatSession> Sessions { get; } = [];
 
-    public MainViewModel(IOllamaService ollamaService, IChatHistoryService chatHistoryService)
+    public ObservableCollection<PresetModeDefinition> PresetModes { get; } = [];
+
+    public MainViewModel(IOllamaService ollamaService, IChatHistoryService chatHistoryService, IPresetModeService presetModeService)
     {
         _ollamaService = ollamaService;
         _chatHistoryService = chatHistoryService;
+        _presetModeService = presetModeService;
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
     }
 
@@ -80,7 +87,53 @@ public partial class MainViewModel : ObservableObject
             Sessions.Add(session);
         }
 
+        await ReloadPresetModesAsync();
+
         IsCheckingOllama = false;
+    }
+
+    public async Task ReloadPresetModesAsync()
+    {
+        var previouslySelectedId = SelectedMode?.Id;
+
+        var modes = await _presetModeService.GetModesAsync();
+        PresetModes.Clear();
+        foreach (var mode in modes)
+        {
+            PresetModes.Add(mode);
+        }
+
+        SelectedMode = previouslySelectedId is { } id
+            ? PresetModes.FirstOrDefault(m => m.Id == id)
+            : null;
+    }
+
+    [RelayCommand]
+    private async Task AddPresetModeAsync((string Name, string SystemPrompt) args)
+    {
+        var name = args.Name.Trim();
+        var prompt = args.SystemPrompt.Trim();
+        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(prompt))
+        {
+            return;
+        }
+
+        await _presetModeService.AddModeAsync(name, prompt);
+        await ReloadPresetModesAsync();
+    }
+
+    [RelayCommand]
+    private async Task UpdatePresetModeAsync(PresetModeDefinition mode)
+    {
+        await _presetModeService.UpdateModeAsync(mode);
+        await ReloadPresetModesAsync();
+    }
+
+    [RelayCommand]
+    private async Task DeletePresetModeAsync(PresetModeDefinition mode)
+    {
+        await _presetModeService.DeleteModeAsync(mode.Id);
+        await ReloadPresetModesAsync();
     }
 
     [RelayCommand]
@@ -155,11 +208,11 @@ public partial class MainViewModel : ObservableObject
             SelectedSession = _currentSession;
         }
 
-        var userMessage = new ChatMessage { Role = ChatRole.User, Content = text };
+        var userMessage = new ChatMessage { Role = ChatRole.User, Content = text, ModeName = SelectedMode?.Name };
         Messages.Add(userMessage);
         DraftMessage = string.Empty;
 
-        var historyForRequest = Messages.ToList();
+        var historyForRequest = BuildRequestHistory();
         var assistantMessage = new ChatMessage { Role = ChatRole.Assistant, Content = string.Empty };
         Messages.Add(assistantMessage);
 
@@ -239,6 +292,27 @@ public partial class MainViewModel : ObservableObject
     private void StopStreaming()
     {
         _streamCts?.Cancel();
+    }
+
+    private List<ChatMessage> BuildRequestHistory()
+    {
+        var systemPrompt = SelectedMode?.SystemPrompt;
+        if (string.IsNullOrEmpty(systemPrompt))
+        {
+            return Messages.ToList();
+        }
+
+        // Insert immediately before the latest (current) user message rather than at the
+        // very start of history, so the active mode has more weight than earlier turns that
+        // may have been sent under a different mode (or no mode at all). The style-override
+        // sentence keeps the model from imitating its own prior reply's tone/structure while
+        // still letting it use the conversation's actual content as context.
+        var scopedPrompt = $"{systemPrompt} For this reply, follow this instruction's style and focus, even if your earlier replies in this conversation used a different approach. You may still reference the conversation's content, just not its previous response style.";
+
+        var history = new List<ChatMessage>(Messages);
+        var insertIndex = history.Count > 0 ? history.Count - 1 : 0;
+        history.Insert(insertIndex, new ChatMessage { Role = ChatRole.System, Content = scopedPrompt });
+        return history;
     }
 
     private async Task PersistCurrentSessionAsync()

@@ -70,10 +70,22 @@ public sealed partial class ChatMessageControl : UserControl
         BubbleBorder.HorizontalAlignment = isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
         BubbleBorder.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
             isUser ? "AccentFillColorDefaultBrush" : "CardBackgroundFillColorDefaultBrush"];
-        RoleTextBlock.HorizontalAlignment = isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+        RoleRow.HorizontalAlignment = isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
         RoleTextBlock.Foreground = isUser
             ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextOnAccentFillColorSecondaryBrush"]
             : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+
+        if (isUser && !string.IsNullOrEmpty(Message?.ModeName))
+        {
+            ModeBadge.Visibility = Visibility.Visible;
+            ModeBadgeText.Text = Message.ModeName;
+            ModeBadge.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["LayerOnAcrylicFillColorDefaultBrush"];
+            ModeBadgeText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextOnAccentFillColorSecondaryBrush"];
+        }
+        else
+        {
+            ModeBadge.Visibility = Visibility.Collapsed;
+        }
 
         SegmentsPanel.Children.Clear();
 

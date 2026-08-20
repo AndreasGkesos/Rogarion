@@ -12,9 +12,19 @@
                 CornerRadius="6"
                 MaxWidth="720">
             <StackPanel Spacing="4">
-                <TextBlock x:Name="RoleTextBlock"
-                           Style="{ThemeResource CaptionTextBlockStyle}"
-                           Opacity="0.7" />
+                <StackPanel x:Name="RoleRow" Orientation="Horizontal" Spacing="6">
+                    <TextBlock x:Name="RoleTextBlock"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.7" />
+                    <Border x:Name="ModeBadge"
+                            CornerRadius="4"
+                            Padding="6,1"
+                            Visibility="Collapsed">
+                        <TextBlock x:Name="ModeBadgeText"
+                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                   FontSize="11" />
+                    </Border>
+                </StackPanel>
                 <StackPanel x:Name="SegmentsPanel" Spacing="8" />
             </StackPanel>
         </Border>
