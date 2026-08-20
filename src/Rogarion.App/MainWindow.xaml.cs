@@ -27,6 +27,7 @@ public sealed partial class MainWindow : Window
         }
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        SetWindowIcon();
 
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.AvailableModels.CollectionChanged += (_, _) => UpdateModelPicker();
@@ -93,6 +94,15 @@ public sealed partial class MainWindow : Window
         SendButton.IsEnabled = CanSend();
         SendButton.Visibility = ViewModel.IsSending ? Visibility.Collapsed : Visibility.Visible;
         StopButton.Visibility = ViewModel.IsSending ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void SetWindowIcon()
+    {
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
+        if (File.Exists(iconPath))
+        {
+            AppWindow.SetIcon(iconPath);
+        }
     }
 
     private void MessageInputBox_TextChanged(object sender, TextChangedEventArgs e)
