@@ -203,7 +203,7 @@
                     <ItemsControl x:Name="MessagesItemsControl" Margin="16,8">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <controls:ChatMessageControl Message="{Binding}" />
+                                <controls:ChatMessageControl Message="{Binding}" Loaded="ChatMessageControl_Loaded" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

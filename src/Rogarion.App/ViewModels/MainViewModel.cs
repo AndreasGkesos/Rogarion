@@ -332,6 +332,26 @@ public partial class MainViewModel : ObservableObject
         DraftMessage = string.Empty;
         PendingFiles.Clear();
 
+        var assistantMessage = await SendAndStreamAsync();
+
+        if (isFirstMessageInSession && assistantMessage is { Content.Length: > 0 })
+        {
+            _ = GenerateSessionTitleAsync(_currentSession!, text, assistantMessage.Content);
+        }
+    }
+
+    /// <summary>
+    /// Appends a fresh assistant reply for the current <see cref="Messages"/> as-is (no new
+    /// user message added) and streams it in. Shared by SendMessageAsync, RetryMessageAsync,
+    /// and EditMessageAsync — all of which differ only in how Messages is set up beforehand.
+    /// </summary>
+    private async Task<ChatMessage?> SendAndStreamAsync()
+    {
+        if (SelectedModel is null || _currentSession is null)
+        {
+            return null;
+        }
+
         var historyForRequest = BuildRequestHistory();
         var assistantMessage = new ChatMessage { Role = ChatRole.Assistant, Content = string.Empty };
         Messages.Add(assistantMessage);
@@ -363,10 +383,85 @@ public partial class MainViewModel : ObservableObject
             await PersistCurrentSessionAsync();
         }
 
-        if (isFirstMessageInSession && !string.IsNullOrEmpty(assistantMessage.Content))
+        return assistantMessage;
+    }
+
+    [RelayCommand]
+    private async Task DeleteMessageAsync(ChatMessage message)
+    {
+        var index = Messages.IndexOf(message);
+        if (index < 0)
         {
-            _ = GenerateSessionTitleAsync(_currentSession, text, assistantMessage.Content);
+            return;
         }
+
+        // Remove the message and everything after it (its answer, plus any later turns —
+        // per the "delete cascades forward" decision, since later turns were generated with
+        // context that no longer exists once this question is gone).
+        while (Messages.Count > index)
+        {
+            Messages.RemoveAt(Messages.Count - 1);
+        }
+
+        await PersistCurrentSessionAsync();
+    }
+
+    [RelayCommand]
+    private async Task RetryMessageAsync(ChatMessage message)
+    {
+        if (IsSending)
+        {
+            return;
+        }
+
+        var index = Messages.IndexOf(message);
+        if (index < 0)
+        {
+            return;
+        }
+
+        // Drop this message's answer and everything after it, then resend the same question.
+        while (Messages.Count > index + 1)
+        {
+            Messages.RemoveAt(Messages.Count - 1);
+        }
+
+        ErrorMessage = null;
+        await SendAndStreamAsync();
+    }
+
+    [RelayCommand]
+    private async Task EditMessageAsync((ChatMessage Message, string NewText) args)
+    {
+        if (IsSending)
+        {
+            return;
+        }
+
+        var newText = args.NewText.Trim();
+        if (string.IsNullOrEmpty(newText))
+        {
+            return;
+        }
+
+        var index = Messages.IndexOf(args.Message);
+        if (index < 0)
+        {
+            return;
+        }
+
+        // Drop everything from this message onward (old answer + any later turns), then
+        // re-add the edited question and get a fresh answer for it.
+        while (Messages.Count > index)
+        {
+            Messages.RemoveAt(Messages.Count - 1);
+        }
+
+        var editedMessage = new ChatMessage { Role = ChatRole.User, Content = newText, ModeName = args.Message.ModeName };
+        Messages.Add(editedMessage);
+
+        ErrorMessage = null;
+        await SendAndStreamAsync();
     }
 
     private async Task GenerateSessionTitleAsync(ChatSession session, string userMessage, string assistantReply)

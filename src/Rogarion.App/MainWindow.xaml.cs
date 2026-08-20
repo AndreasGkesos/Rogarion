@@ -47,6 +47,14 @@ public sealed partial class MainWindow : Window
         UpdateVisibleState();
     }
 
+    private void ChatMessageControl_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is ChatMessageControl control)
+        {
+            control.ViewModel = ViewModel;
+        }
+    }
+
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         UpdateVisibleState();

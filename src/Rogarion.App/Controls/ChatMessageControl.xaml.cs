@@ -4,6 +4,7 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
+using Rogarion.App.ViewModels;
 using Rogarion.Core.Models;
 using Windows.ApplicationModel.DataTransfer;
 
@@ -20,10 +21,23 @@ public sealed partial class ChatMessageControl : UserControl
             typeof(ChatMessageControl),
             new PropertyMetadata(null, OnMessageChanged));
 
+    public static readonly DependencyProperty ViewModelProperty =
+        DependencyProperty.Register(
+            nameof(ViewModel),
+            typeof(MainViewModel),
+            typeof(ChatMessageControl),
+            new PropertyMetadata(null));
+
     public ChatMessage? Message
     {
         get => (ChatMessage?)GetValue(MessageProperty);
         set => SetValue(MessageProperty, value);
+    }
+
+    public MainViewModel? ViewModel
+    {
+        get => (MainViewModel?)GetValue(ViewModelProperty);
+        set => SetValue(ViewModelProperty, value);
     }
 
     public ChatMessageControl()
@@ -86,6 +100,17 @@ public sealed partial class ChatMessageControl : UserControl
         {
             ModeBadge.Visibility = Visibility.Collapsed;
         }
+
+        MoreOptionsButton.Visibility = isUser ? Visibility.Visible : Visibility.Collapsed;
+        if (MoreOptionsButton.Content is FontIcon moreIcon)
+        {
+            moreIcon.Foreground = isUser
+                ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextOnAccentFillColorSecondaryBrush"]
+                : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        }
+
+        EditPanel.Visibility = Visibility.Collapsed;
+        SegmentsPanel.Visibility = Visibility.Visible;
 
         SegmentsPanel.Children.Clear();
 
@@ -184,6 +209,74 @@ public sealed partial class ChatMessageControl : UserControl
         container.Children.Add(codeBorder);
 
         return container;
+    }
+
+    private void EditMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (Message is null)
+        {
+            return;
+        }
+
+        SegmentsPanel.Visibility = Visibility.Collapsed;
+        EditPanel.Visibility = Visibility.Visible;
+        EditTextBox.Text = Message.Content;
+        EditTextBox.Focus(FocusState.Programmatic);
+        EditTextBox.SelectionStart = EditTextBox.Text.Length;
+    }
+
+    private void CancelEditButton_Click(object sender, RoutedEventArgs e)
+    {
+        EditPanel.Visibility = Visibility.Collapsed;
+        SegmentsPanel.Visibility = Visibility.Visible;
+    }
+
+    private async void SaveEditButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (Message is null || ViewModel is null)
+        {
+            return;
+        }
+
+        var newText = EditTextBox.Text;
+        EditPanel.Visibility = Visibility.Collapsed;
+        SegmentsPanel.Visibility = Visibility.Visible;
+
+        await ViewModel.EditMessageCommand.ExecuteAsync((Message, newText));
+    }
+
+    private async void RetryMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (Message is null || ViewModel is null)
+        {
+            return;
+        }
+
+        await ViewModel.RetryMessageCommand.ExecuteAsync(Message);
+    }
+
+    private async void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (Message is null || ViewModel is null)
+        {
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = "Delete this message?",
+            Content = "This will also delete its answer and any later messages in this conversation. This can't be undone.",
+            PrimaryButtonText = "Delete",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            await ViewModel.DeleteMessageCommand.ExecuteAsync(Message);
+        }
     }
 
     private static ILanguage? ResolveLanguage(string? language)

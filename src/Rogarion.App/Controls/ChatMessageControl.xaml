@@ -12,20 +12,69 @@
                 CornerRadius="6"
                 MaxWidth="720">
             <StackPanel Spacing="4">
-                <StackPanel x:Name="RoleRow" Orientation="Horizontal" Spacing="6">
-                    <TextBlock x:Name="RoleTextBlock"
-                               Style="{ThemeResource CaptionTextBlockStyle}"
-                               Opacity="0.7" />
-                    <Border x:Name="ModeBadge"
-                            CornerRadius="4"
-                            Padding="6,1"
-                            Visibility="Collapsed">
-                        <TextBlock x:Name="ModeBadgeText"
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel x:Name="RoleRow" Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                        <TextBlock x:Name="RoleTextBlock"
                                    Style="{ThemeResource CaptionTextBlockStyle}"
-                                   FontSize="11" />
-                    </Border>
-                </StackPanel>
+                                   Opacity="0.7" />
+                        <Border x:Name="ModeBadge"
+                                CornerRadius="4"
+                                Padding="6,1"
+                                Visibility="Collapsed">
+                            <TextBlock x:Name="ModeBadgeText"
+                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                       FontSize="11" />
+                        </Border>
+                    </StackPanel>
+
+                    <Button x:Name="MoreOptionsButton"
+                            Grid.Column="1"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="4"
+                            Visibility="Collapsed"
+                            ToolTipService.ToolTip="More">
+                        <FontIcon Glyph="&#xE712;" FontSize="12" />
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Edit" Click="EditMenuItem_Click">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE70F;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="Retry" Click="RetryMenuItem_Click">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE72C;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="Delete" Click="DeleteMenuItem_Click">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE74D;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </Grid>
+
                 <StackPanel x:Name="SegmentsPanel" Spacing="8" />
+
+                <!-- Inline edit mode: replaces SegmentsPanel's display while editing this message. -->
+                <StackPanel x:Name="EditPanel" Visibility="Collapsed" Spacing="8">
+                    <TextBox x:Name="EditTextBox"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="60" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Save" Click="SaveEditButton_Click" />
+                        <Button Content="Cancel" Click="CancelEditButton_Click" />
+                    </StackPanel>
+                </StackPanel>
             </StackPanel>
         </Border>
     </Grid>
