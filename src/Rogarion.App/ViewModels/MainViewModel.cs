@@ -43,6 +43,15 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private PresetModeDefinition? _selectedMode;
 
+    [ObservableProperty]
+    private int _contextWindowTokens = DefaultContextWindowTokens;
+
+    [ObservableProperty]
+    private double _contextUsagePercent;
+
+    private const int DefaultContextWindowTokens = 8192;
+    private const double ContextTruncationThreshold = 0.8;
+
     public ObservableCollection<string> AvailableModels { get; } = [];
 
     public ObservableCollection<ChatMessage> Messages { get; } = [];
@@ -59,6 +68,38 @@ public partial class MainViewModel : ObservableObject
         _chatHistoryService = chatHistoryService;
         _presetModeService = presetModeService;
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+
+        Messages.CollectionChanged += (_, _) => UpdateContextUsage();
+    }
+
+    partial void OnSelectedModelChanged(string? value)
+    {
+        _ = RefreshContextWindowAsync(value);
+    }
+
+    private async Task RefreshContextWindowAsync(string? model)
+    {
+        ContextWindowTokens = DefaultContextWindowTokens;
+
+        if (string.IsNullOrEmpty(model))
+        {
+            UpdateContextUsage();
+            return;
+        }
+
+        var window = await _ollamaService.GetContextWindowAsync(model);
+        ContextWindowTokens = window ?? DefaultContextWindowTokens;
+        UpdateContextUsage();
+    }
+
+    private void UpdateContextUsage()
+    {
+        // Rough token estimate (chars/4); good enough for a usage indicator, not exact.
+        var totalChars = Messages.Sum(m => m.Content?.Length ?? 0);
+        var estimatedTokens = totalChars / 4;
+        ContextUsagePercent = ContextWindowTokens > 0
+            ? Math.Min(100.0, estimatedTokens * 100.0 / ContextWindowTokens)
+            : 0;
     }
 
     public async Task InitializeAsync()
@@ -379,23 +420,63 @@ public partial class MainViewModel : ObservableObject
 
     private List<ChatMessage> BuildRequestHistory()
     {
+        List<ChatMessage> history;
+
         var systemPrompt = SelectedMode?.SystemPrompt;
         if (string.IsNullOrEmpty(systemPrompt))
         {
-            return Messages.ToList();
+            history = Messages.ToList();
+        }
+        else
+        {
+            // Insert immediately before the latest (current) user message rather than at the
+            // very start of history, so the active mode has more weight than earlier turns that
+            // may have been sent under a different mode (or no mode at all). The style-override
+            // sentence keeps the model from imitating its own prior reply's tone/structure while
+            // still letting it use the conversation's actual content as context.
+            var scopedPrompt = $"{systemPrompt} For this reply, follow this instruction's style and focus, even if your earlier replies in this conversation used a different approach. You may still reference the conversation's content, just not its previous response style.";
+
+            history = new List<ChatMessage>(Messages);
+            var insertIndex = history.Count > 0 ? history.Count - 1 : 0;
+            history.Insert(insertIndex, new ChatMessage { Role = ChatRole.System, Content = scopedPrompt });
         }
 
-        // Insert immediately before the latest (current) user message rather than at the
-        // very start of history, so the active mode has more weight than earlier turns that
-        // may have been sent under a different mode (or no mode at all). The style-override
-        // sentence keeps the model from imitating its own prior reply's tone/structure while
-        // still letting it use the conversation's actual content as context.
-        var scopedPrompt = $"{systemPrompt} For this reply, follow this instruction's style and focus, even if your earlier replies in this conversation used a different approach. You may still reference the conversation's content, just not its previous response style.";
+        return TruncateIfOverThreshold(history);
+    }
 
-        var history = new List<ChatMessage>(Messages);
-        var insertIndex = history.Count > 0 ? history.Count - 1 : 0;
-        history.Insert(insertIndex, new ChatMessage { Role = ChatRole.System, Content = scopedPrompt });
-        return history;
+    private List<ChatMessage> TruncateIfOverThreshold(List<ChatMessage> history)
+    {
+        var estimatedTokens = history.Sum(m => (m.Content?.Length ?? 0) / 4);
+        var thresholdTokens = ContextWindowTokens * ContextTruncationThreshold;
+        if (estimatedTokens <= thresholdTokens)
+        {
+            return history;
+        }
+
+        // Drop oldest non-system turns first, keeping the system message (if any) and as many
+        // of the most recent messages as fit back under the threshold. No summarization — just
+        // a hard cutoff, per the "no auto-summarization" plan.
+        var systemMessages = history.Where(m => m.Role == ChatRole.System).ToList();
+        var conversationMessages = history.Where(m => m.Role != ChatRole.System).ToList();
+
+        var kept = new List<ChatMessage>();
+        var runningTokens = systemMessages.Sum(m => (m.Content?.Length ?? 0) / 4);
+
+        for (var i = conversationMessages.Count - 1; i >= 0; i--)
+        {
+            var messageTokens = (conversationMessages[i].Content?.Length ?? 0) / 4;
+            if (runningTokens + messageTokens > thresholdTokens && kept.Count > 0)
+            {
+                break;
+            }
+
+            kept.Insert(0, conversationMessages[i]);
+            runningTokens += messageTokens;
+        }
+
+        var result = new List<ChatMessage>(systemMessages);
+        result.AddRange(kept);
+        return result;
     }
 
     private string BuildFallbackTitle(string text)

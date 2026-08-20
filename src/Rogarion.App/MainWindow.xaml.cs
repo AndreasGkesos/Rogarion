@@ -55,6 +55,18 @@ public sealed partial class MainWindow : Window
         {
             SessionListView.SelectedItem = ViewModel.SelectedSession;
         }
+
+        if (e.PropertyName is nameof(MainViewModel.ContextUsagePercent) or nameof(MainViewModel.ContextWindowTokens))
+        {
+            UpdateContextUsageDisplay();
+        }
+    }
+
+    private void UpdateContextUsageDisplay()
+    {
+        ContextUsageTextBlock.Text = ViewModel.ContextUsagePercent > 0
+            ? $"context: {ViewModel.ContextUsagePercent:0}%"
+            : string.Empty;
     }
 
     private void UpdateVisibleState()

@@ -53,6 +53,50 @@ public class OllamaService : IOllamaService
         }
     }
 
+    public async Task<int?> GetContextWindowAsync(string model, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/show", new { model }, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            using var doc = await JsonDocument.ParseAsync(
+                await response.Content.ReadAsStreamAsync(cancellationToken),
+                cancellationToken: cancellationToken);
+
+            if (!doc.RootElement.TryGetProperty("model_info", out var modelInfo))
+            {
+                return null;
+            }
+
+            foreach (var property in modelInfo.EnumerateObject())
+            {
+                if (property.Name.EndsWith(".context_length", StringComparison.Ordinal)
+                    && property.Value.TryGetInt32(out var contextLength))
+                {
+                    return contextLength;
+                }
+            }
+
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+        catch (TaskCanceledException)
+        {
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     public async IAsyncEnumerable<string> StreamChatAsync(
         string model,
         IReadOnlyList<ChatMessage> messages,

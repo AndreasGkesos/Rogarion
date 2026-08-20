@@ -129,6 +129,13 @@
                               MinWidth="220"
                               HorizontalAlignment="Left"
                               SelectionChanged="ModelPickerComboBox_SelectionChanged" />
+
+                    <TextBlock x:Name="ContextUsageTextBlock"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.7"
+                               ToolTipService.ToolTip="Estimated share of the model's context window used by this conversation" />
                 </Grid>
 
                 <!-- Checking state -->
