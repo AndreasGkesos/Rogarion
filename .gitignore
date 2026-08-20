@@ -2,7 +2,9 @@
 bin/
 obj/
 *.user
+*.suo
 .vs/
+.idea/
 
 ## MSIX / packaging
 AppPackages/
@@ -23,8 +25,12 @@ Rogarion.Installer/staging/
 
 ## LiteDB local data
 *.db
+*.db-journal
 *.litedb
 
 ## OS
 Thumbs.db
 .DS_Store
+
+## Logs
+*.log
