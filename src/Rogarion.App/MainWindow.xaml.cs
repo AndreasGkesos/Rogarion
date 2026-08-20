@@ -242,6 +242,7 @@ public sealed partial class MainWindow : Window
     private void NewChatButton_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.NewSessionCommand.Execute(null);
+        MessageInputBox.Focus(FocusState.Programmatic);
     }
 
     private void SessionListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
